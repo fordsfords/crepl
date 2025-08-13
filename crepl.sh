@@ -64,7 +64,7 @@ print_main() {
         int: printf("i %d (0x%08x)\n", _temp_val, (unsigned int)_temp_val), \\
         unsigned int: printf("ui %u (0x%08x)\n", _temp_val, _temp_val), \\
         long: printf("l %ld (0x%0*lx)\n", _temp_val, (int)(sizeof(long)*2), (unsigned long)_temp_val), \\
-        unsigned long: printf("ul %lu (0x%*lx)\n", _temp_val, (int)(sizeof(long)*2), _temp_val), \\
+        unsigned long: printf("ul %lu (0x%0*lx)\n", _temp_val, (int)(sizeof(long)*2), _temp_val), \\
         long long: printf("ll %lld (0x%016llx)\n", _temp_val, (unsigned long long)_temp_val), \\
         unsigned long long: printf("ul %llu (0x%016llx)\n", _temp_val, _temp_val), \\
         float: printf("f %f\n", (double)_temp_val), \\
