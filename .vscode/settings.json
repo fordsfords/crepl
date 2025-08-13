@@ -6,6 +6,7 @@
         "headerfile",
         "inputrc",
         "libnames",
-        "rlwrap"
+        "rlwrap",
+        "Woverflow"
     ]
 }

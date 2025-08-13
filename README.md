@@ -18,9 +18,12 @@ This was written primarily to make simple arithmetic experiments easy.
 &nbsp;&nbsp;&nbsp;&nbsp;&bull; [Practical Examples](#practical-examples)  
 &nbsp;&nbsp;&nbsp;&nbsp;&bull; [Quirks and Limitations](#quirks-and-limitations)  
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&bull; [Multi-line Statements](#multi-line-statements)  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&bull; [Re-Defining Variables and Functions](#re-defining-variables-and-functions)  
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&bull; [Awkward Semicolon Use](#awkward-semicolon-use)  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&bull; [Temp Files Persist](#temp-files-persist)  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&bull; [Auto-Print of Unsupported Types](#auto-print-of-unsupported-types)  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&bull; [Printf Confusion](#printf-confusion)  
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&bull; [Non-Deterministic Functions](#non-deterministic-functions)  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&bull; [Temp Files Persist](#temp-files-persist)  
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&bull; [Globals?](#globals)  
 &nbsp;&nbsp;&nbsp;&nbsp;&bull; [Requirements](#requirements)  
 &nbsp;&nbsp;&nbsp;&nbsp;&bull; [TODO](#todo)  
@@ -101,7 +104,7 @@ Supported types: char, unsigned char, short, unsigned short, int, unsigned int, 
 - `!help` - Show available commands
 - `!list` - Show all accumulated code
 - `!new` - Clear all accumulated code and start fresh
-- `!errs` - Show compilation/runtime errors from last attempt
+- `!errs` - Show compilation/runtime errors from last attempt. Note that lines numbers refer to the "crepl_temp.c" file.
 - `!vi` - Edit accumulated code in vi
 - `!quit` - Exit the REPL
 
@@ -146,6 +149,38 @@ Alternatively, you can use the "!vi" command to edit the golden file directly
 and enter multi-line constructs.
 But that kind of defeats the purpose of a simple REPL, doesn't it? :-)
 
+### Re-Defining Variables and Functions
+
+Consider this session:
+```
+c> int i = 5000000000;
+c> i
+i 705032704 (0x2a05f200)
+c> long long i = 5000000000;
+Compilation error, line rejected. Enter '!errs' for details.
+c> !errs
+crepl_temp.c: In function ‘main’:
+crepl_temp.c:28:9: warning: overflow in conversion from ‘long int’ to ‘int’ changes value from ‘5000000000’ to ‘705032704’ [-Woverflow]
+   28 | int i = 5000000000;
+      |         ^~~~~~~~~~
+crepl_temp.c:30:11: error: conflicting types for ‘i’; have ‘long long int’
+   30 | long long i = 5000000000;
+      |           ^
+crepl_temp.c:28:5: note: previous definition of ‘i’ with type ‘int’
+   28 | int i = 5000000000;
+      |     ^
+```
+I chose the wrong type for `i` the first time and the value wasn't right.
+I tried to re-define `i`, and it got a compile error.
+Since this REPL simply accumulates the lines, C sees it as an attempt to
+re-define `i`, and doesn't allow it.
+
+The same thing will happen if you try to re-define a C function.
+
+The solution is to use the "!vi" command and simply edit the golden file
+to update the earlier definition.
+
+
 ### Awkward Semicolon Use
 
 The semicolon rule can feel awkward.
@@ -160,13 +195,63 @@ The trailing semicolon prevents the REPL from trying to print the function defin
 Variables and functions persist across inputs during a session, but there's no namespace isolation - everything lives in the same scope.
 
 
-### Temp Files Persist
+### Auto-Print of Unsupported Types
 
-When you exit, the tool leaves its temporary files for you to examine:
-* crepl_golden.c - your commands so far.
-* crepl_temp.c - the most-recent full C file that was compiled.
-If you get a compile error, you can examine the full program.
-* crepl_errs.log - Either compile errors or run-time errors.
+The code crepl.sh generates tries to automatically detect the type of an
+expression and print it properly.
+It currently supports the numeric types (integer and floating).
+If you try to auto-print something that isn't supported, you will probably get
+a many compile errors all referring to a set of printf calls.
+
+The solution is to not try to auto-print non-numeric expressions.
+You can typically just add a semicolon to the end of the line that isn't
+a numeric type.
+
+If you want to print something that isn't numeric, like a string or maybe a
+pointer address, you'll have to code your own printf.
+
+
+### Printf Confusion
+
+If you code your own printf calls, you will see unexpected behavior:
+```
+c> int i = 1;
+c> printf("printing i=%d\n", i);
+printing i=1
+c> printf("done\n");
+printing i=1
+done
+c> ++i
+printing i=1
+done
+i 2 (0x00000002)
+```
+This looks wrong.
+We are used to the value print coming out only once.
+But the printf lines are redisplayed with every code line entry.
+This is because with each code line entry,
+the collected liens of code are compiled and executed.
+So of course all the printf calls happen each time.
+
+But also confusing is the fact that after the "++i" line, it displayed
+"printing i=1".
+But the increment should have set `i` to 2.
+But again, remember that all the lines of code are executed in sequence
+with each entry.
+When the printf is executed, `i` is just 1.
+
+All of this becomes more clear if you use the "!list" command:
+```
+c> !list
+Current code:
+
+int i = 1;
+printf("i=%d\n", i);
+printf("done\n");
+++i;
+```
+Now you can understand why I got my output when I entered "++i" -
+entering that line executed all of the above lines in sequence.
 
 
 ### Non-Deterministic Functions
@@ -212,6 +297,20 @@ code.
 But so long as you are aware of what it really happening, it can still be useful to test
 behaviors of non-deterministic functions.
 Just know that the "state" will change with each line of code entered.
+
+
+### Temp Files Persist
+
+When you exit, the tool leaves its temporary files for you to examine:
+* crepl_golden.c - your commands so far.
+* crepl_temp.c - the most-recent full C file that was compiled.
+If you get a compile error, you can examine the full program.
+* crepl_errs.log - Either compile errors or run-time errors.
+
+When crepl.sh is executed normally, the "crepl_golden.c" is deleted
+during initialization.
+When crepl.sh is executed with "-c", the "crepl_golden.c" is not
+deleted, letting you pick up where you left off previously.
 
 
 ### Globals?
