@@ -133,13 +133,16 @@ i 49 (0x00000031)
 
 ## Quirks and Limitations
 
-crepl.sh is very limited.
+### Multi-line Statements
+
 Each line entered must be a fully-compilable fragment of C code.
 For example, if you want to define a function, the whole definition must fit
 on one line (although there's no particular limit on line length).
 Alternatively, you can use the "!vi" command to edit the golden file directly
 and enter multi-line constructs.
 But that kind of defeats the purpose of a simple REPL, doesn't it? :-)
+
+### Awkward Semicolon Use
 
 The semicolon rule can feel awkward.
 Sometimes you need a trailing semicolon to suppress auto-print even when it's not syntactically required:
@@ -152,6 +155,9 @@ The trailing semicolon prevents the REPL from trying to print the function defin
 
 Variables and functions persist across inputs during a session, but there's no namespace isolation - everything lives in the same scope.
 
+
+### Temp Files Persist
+
 When you exit, the tool leaves its temporary files for you to examine:
 * crepl_golden.c - your commands so far.
 * crepl_temp.c - the most-recent full C file that was compiled.
@@ -159,16 +165,52 @@ If you get a compile error, you can examine the full program.
 * crepl_errs.log - Either compile errors or run-time errors.
 
 
-## Requirements
+### Non-Deterministic Functions
 
-- gcc with C11 support
-- bash
-- Standard Unix utilities (vi for the `!vi` command)
+Most language REPLs are interpreters for the language.
+As you enter lines of code, the interpreter evaluates them and saves state
+in the interpreter.
+I.e. if you say "i = 10", it stores 10 into the variable i and the prompts
+for the next line.
+When that line executes, say "++i", the variable i still exists,
+and it is incremented.
 
-The script uses `gcc -std=gnu11` and links with the math library (`-lm`).
+In contrast, crepl.sh does not work that way.
+It builds up the lines of code in its "golden file",
+and executes all of them with each entry.
+I.e. if you say "i = 10", it runs a program that sets the variable i to 10
+and exits.
+All state is lost.
+If you then say "++i", now the program contains both lines.
+It compiles that new program that contains both lines and runs them.
+Thus, in the second run, both lines are executed, and the result is what you expect.
+
+However, there can be cases where this model breaks down.
+Consider the following sequence:
+```
+c> long t = time();
+c> ++t
+l 1755119484 (0x00000000689cff7c)
+c> ++t
+l 1755119489 (0x00000000689cff81)
+```
+As you can see, the value of t increased by 5, which makes sense since I waited about
+4 seconds between the two "++t" lines.
+The time() function is non-deterministic - it will return different values when called at
+different times.
+Each time a new line of code is added, the program is re-run, and "time()" returns a
+potentially different value.
+
+This same thing happens for calls to getrandom().
+
+These non-deterministic functions break the illusion that state is saved between lines of
+code.
+But so long as you are aware of what it really happening, it can still be useful to test
+behaviors of non-deterministic functions.
+Just know that the "state" will change with each line of code entered.
 
 
-## Implementation Notes
+### Globals?
 
 It is easy to imagine that the lines of code you enter are somehow in a
 global namespace, with variables and functions globally accessible.
@@ -193,6 +235,15 @@ However, I suspect there are cases where the behavior differs,
 and crepl would act differently than "normal" C code.
 
 If anybody encounters issues related to function nesting, let me know.
+
+
+## Requirements
+
+- gcc with C11 support
+- bash
+- Standard Unix utilities (vi for the `!vi` command)
+
+The script uses `gcc -std=gnu11` and links with the math library (`-lm`).
 
 
 ## TODO
