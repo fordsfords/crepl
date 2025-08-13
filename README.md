@@ -42,7 +42,7 @@ Lines that compile and run successfully are accumulated in a
 "golden file" so you can build up state across multiple inputs.
 
 Note that crepl.sh is well-suited for use with rlwrap to provide
-command-line recall and editing; see [rlwrap](#lrwrap).
+command-line recall and editing; see [Rlwrap](#rlwrap).
 
 
 ## Basic Usage
