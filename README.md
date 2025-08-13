@@ -41,6 +41,10 @@ compiled with gcc, and executed immediately.
 Lines that compile and run successfully are accumulated in a
 "golden file" so you can build up state across multiple inputs.
 
+Note that crepl.sh is well-suited for use with rlwrap to provide
+command-line recall and editing; see [rlwrap](#lrwrap).
+
+
 ## Basic Usage
 
 ```bash
@@ -78,9 +82,6 @@ This rule exists because C statements like `int x = 42;` aren't expressions and 
 
 If you make a mistake and it doesn't compile, the line is not added to the "golden file".
 The goal is for the golden file to always be compilable.
-
-Note that crepl.sh is well-suited for use with rlwrap to provide
-command-line recall and editing; see [rlwrap](#lrwrap).
 
 ## Auto-Print Format
 
