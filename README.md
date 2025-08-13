@@ -1,12 +1,24 @@
 # crepl
-Simple C REPL (Read, Eval, Print, Loop) for interactive experimentation
+Simple C [REPL](https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop)
+(Read, Eval, Print, Loop) for interactive experimentation
 with lines of C code.
-This was written primarly to make simple arithmetic experiments easy.
+This was written primarily to make simple arithmetic experiments easy.
 
 
 ## Table of contents
 
 <!-- mdtoc-start -->
+&bull; [crepl](#crepl)  
+&nbsp;&nbsp;&nbsp;&nbsp;&bull; [Table of contents](#table-of-contents)  
+&nbsp;&nbsp;&nbsp;&nbsp;&bull; [Introduction](#introduction)  
+&nbsp;&nbsp;&nbsp;&nbsp;&bull; [Basic Usage](#basic-usage)  
+&nbsp;&nbsp;&nbsp;&nbsp;&bull; [The Semicolon Rule](#the-semicolon-rule)  
+&nbsp;&nbsp;&nbsp;&nbsp;&bull; [Auto-Print Format](#auto-print-format)  
+&nbsp;&nbsp;&nbsp;&nbsp;&bull; [Commands](#commands)  
+&nbsp;&nbsp;&nbsp;&nbsp;&bull; [Practical Examples](#practical-examples)  
+&nbsp;&nbsp;&nbsp;&nbsp;&bull; [Quirks and Limitations](#quirks-and-limitations)  
+&nbsp;&nbsp;&nbsp;&nbsp;&bull; [Requirements](#requirements)  
+&nbsp;&nbsp;&nbsp;&nbsp;&bull; [License](#license)  
 <!-- TOC created by '../mdtoc/mdtoc.pl README.md' (see https://github.com/fordsfords/mdtoc) -->
 <!-- mdtoc-end -->
 
@@ -63,6 +75,9 @@ This rule exists because C statements like `int x = 42;` aren't expressions and 
 
 If you make a mistake and it doesn't compile, the line is not added to the "golden file".
 The goal is for the golden file to always be compilable.
+
+Note that crepl.sh is well-suited for use with rlwrap to provide
+command-line recall and editing; see [rlwrap](#lrwrap).
 
 ## Auto-Print Format
 
@@ -149,6 +164,79 @@ If you get a compile error, you can examine the full program.
 The script uses `gcc -std=gnu11` and links with the math library (`-lm`).
 
 
+## Implementation Notes
+
+It is easy to imagine that the lines of code you enter are somehow in a
+global namespace, with variables and functions globally accessible.
+However, the reality is that all entered code is wrapped inside the
+function "main()", so variables are actually local to main().
+
+So how are we able to define functions?
+I.e. how does this even work:
+```
+c> int add(int a, int b) { return a + b; };
+```
+
+While not standard C, the gcc compiler supports nested functions.
+So any functions you define are nested in main().
+Gcc even uses
+[trampolining](https://en.wikipedia.org/wiki/Trampoline_(computing))
+so that the nested function can access main()'s local variables.
+
+From the user's point of view, it seems to act as if your variables,
+functions, and code lines are global, just like normal C.
+However, I suspect there are cases where the behavior differs,
+and crepl would act differently than "normal" C code.
+
+If anybody encounters issues related to function nesting, let me know.
+
+
+## TODO
+
+1. Have a way that you can specify external modules to be compiled and/or linked
+with. I'm thinking of a "!link libnames" for just adding libraries and a
+"!use cfiles" command for adding additional .c files.
+And maybe a "!include headerfile" to add include directives above main().
+
+2. Add an auto-print of string type.
+
+3. Is there a way to leverage gdb to print entire complex structures?
+
+
+## Rlwrap
+
+The Unix rlwrap tool is an interesting oddity that is rarely needed,
+but when used can be VERY handy.
+It's intended for use with interactive tools that don't implement
+advanced command-line editing and command recall.
+Most popular interactive tools DO support command-line editing,
+so rlwrap isn't needed very often.
+
+But if you've developed your own tools that read from standard in
+and perform tasks, you probably didn't go to the trouble of using
+[readline()](https://www.man7.org/linux/man-pages/man3/readline.3.html)
+so you can't recall older input lines, and your only editing
+ability is deleting and re-typing.
+
+The rlwrap command brings all those simple interactive tools into
+full "bash-style" command-line editing.
+
+For example:
+```
+rlwrap ./crepl.sh
+```
+Now you can enter commands, recall old ones, and edit them just like
+bash.
+
+Personally, I like to set "vi" mode for my bash shells.
+The only way I've found to change rlwrap to "vi" mode is
+by creating a "~/.inputrc" file containing:
+```
+set editing-mode vi
+```
+But be aware that this changes the mode for ALL interactive tools
+that use Gnu `readline`.
+So, for example, gdb will also use that file.
 
 
 ## License

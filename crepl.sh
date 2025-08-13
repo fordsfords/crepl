@@ -115,7 +115,7 @@ while true; do
         continue
     elif [[ "$in_line" == "!vi" ]]; then
         vi "$GOLDEN_FILE"
-        in_line=""
+        in_line=";"
     fi
 
     # Build the new program file.
