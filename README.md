@@ -18,6 +18,9 @@ This was written primarily to make simple arithmetic experiments easy.
 &nbsp;&nbsp;&nbsp;&nbsp;&bull; [Practical Examples](#practical-examples)  
 &nbsp;&nbsp;&nbsp;&nbsp;&bull; [Quirks and Limitations](#quirks-and-limitations)  
 &nbsp;&nbsp;&nbsp;&nbsp;&bull; [Requirements](#requirements)  
+&nbsp;&nbsp;&nbsp;&nbsp;&bull; [Implementation Notes](#implementation-notes)  
+&nbsp;&nbsp;&nbsp;&nbsp;&bull; [TODO](#todo)  
+&nbsp;&nbsp;&nbsp;&nbsp;&bull; [Rlwrap](#rlwrap)  
 &nbsp;&nbsp;&nbsp;&nbsp;&bull; [License](#license)  
 <!-- TOC created by '../mdtoc/mdtoc.pl README.md' (see https://github.com/fordsfords/mdtoc) -->
 <!-- mdtoc-end -->
