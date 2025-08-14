@@ -386,15 +386,25 @@ rlwrap ./crepl.sh
 Now you can enter commands, recall old ones, and edit them just like
 bash.
 
-Personally, I like to set "vi" mode for my bash shells.
+There is a
+[bug](https://github.com/hanslub42/rlwrap/issues/108)
+in some versions of Linux which cases the prompt to be
+cleared when a command is entered.
+A workaround is to create a "~/.inputrc" file containing this line:
+```
+set enable-bracketed-paste off
+```
+I don't know if this has any undesired side effects elsewhere.
+
+Personally, I like to set "vi" mode for my bash shells (set -o vi).
 The only way I've found to change rlwrap to "vi" mode is
-by creating a "~/.inputrc" file containing:
+by adding this to the "~/.inputrc" file:
 ```
 set editing-mode vi
 ```
 But be aware that this changes the mode for ALL interactive tools
 that use Gnu `readline`.
-So, for example, gdb will also use that file.
+So, for example, gdb will also use that file and switch to "vi" mode.
 
 
 ## License
