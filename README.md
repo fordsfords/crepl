@@ -64,6 +64,12 @@ This starts a fresh session. Use `-c` to continue a previous session:
 ./crepl.sh -c
 ```
 
+WARNING: You probably want to run this tool in an otherwise empty directory
+since it creates some files that it intentionally does not clean up.
+Also, do not run two instances of the tool in the same directory at the
+same time as they will conflict.
+
+
 ## The Semicolon Rule
 
 The REPL's behavior depends on whether your input ends with a semicolon:
@@ -101,11 +107,17 @@ Supported types: char, unsigned char, short, unsigned short, int, unsigned int, 
 
 ## Commands
 
-- `!help` - Show available commands
-- `!list` - Show all accumulated code
-- `!new` - Clear all accumulated code and start fresh
-- `!errs` - Show compilation/runtime errors from last attempt. Note that lines numbers refer to the "crepl_temp.c" file.
-- `!vi` - Edit accumulated code in vi
+All commands start with exclamation point ("!").
+Any that doesn't start with explanation point is treated as a line of code to
+be executed.
+
+- `!help` - Show available commands.
+- `!errs` - Show compilation/runtime errors from last attempt. Note that line numbers refer to the 'crepl_temp.c' file.
+- `!new` - Clear all accumulated code and start fresh.
+- `!list` - Show all accumulated code.
+- `!vi` - Edit accumulated code in vi.
+- `!source filename` - read input from filename.
+- `!sh` - start an interactive sub-shell. Exit shell to return to crepl.
 - `!quit` - Exit the REPL
 
 ## Practical Examples
@@ -302,7 +314,8 @@ Just know that the "state" will change with each line of code entered.
 ### Temp Files Persist
 
 When you exit, the tool leaves its temporary files for you to examine:
-* crepl_golden.c - your commands so far.
+* crepl_golden.c - your commands so far ("golden file").
+* crepl_golden.c.bak - golden file from your previous session.
 * crepl_temp.c - the most-recent full C file that was compiled.
 If you get a compile error, you can examine the full program.
 * crepl_errs.log - Either compile errors or run-time errors.

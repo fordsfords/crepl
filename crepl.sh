@@ -12,13 +12,6 @@
 # restrictions.  This work is published from: United States.  The project home
 # is https://github.com/fordsfords/crepl
 
-# Prevent core files.
-ulimit -c 0
-
-GOLDEN_FILE="crepl_golden.c"
-TEMP_FILE="crepl_temp.c"
-ERR_LOG="crepl_errs.log"
-EXECUTABLE="./crepl_exe"
 
 usage() {
     echo "Usage: ./crepl.sh [-h] [-c]"
@@ -26,33 +19,25 @@ usage() {
     echo "  -h : help."
     echo "  -c : continue previous session."
     list_help
-}
+}  # usage
+
 
 list_help() {
     echo "Commands:"
-    echo "  !help  - Show this help"
-    echo "  !errs  - Show full error log"
-    echo "  !list  - Show current accumulated code"
-    echo "  !new   - Clear all accumulated code"
+    echo "  !help  - Show this help."
+    echo "  !errs  - Show compilation/runtime errors from last attempt. Note that line numbers refer to the 'crepl_temp.c' file."
+    echo "  !new   - Clear all accumulated code."
+    echo "  !list  - Show current accumulated code."
+    echo "  !vi    - Edit accumulated code in vi."
+    echo "  !source filename - read input from filename."
+    echo "  !sh    - start an interactive subshell. Exit shell to return to crepl."
     echo "  !quit  - Exit the REPL"
-    echo "  !vi    - Edit accumulated code in vi"
     echo "Autoprint types handled:"
     echo "  char, unsigned char, short, unsigned short,"
     echo "  int, unsigned int, long, unsigned long,"
     echo "  long long, unsigned long long, float, double"
-}
+}  # list_help
 
-CLEAR=1
-if [ "$1" = "" ]; then :;  # no option
-elif [ "$1" = "-h" ]; then usage; exit 0
-elif [ "$1" = "-c" ]; then CLEAR=0
-else echo "Bad option '$1'" >&2; exit 1
-fi
-
-if [ $CLEAR -ne 0 ]; then :
-  # Initialize golden file
-  echo "" > "$GOLDEN_FILE"
-fi
 
 # Create main template
 print_main() {
@@ -75,7 +60,7 @@ print_main() {
         long: printf("l %ld (0x%0*lx)\n", _temp_val, (int)(sizeof(long)*2), (unsigned long)_temp_val), \\
         unsigned long: printf("ul %lu (0x%0*lx)\n", _temp_val, (int)(sizeof(long)*2), _temp_val), \\
         long long: printf("ll %lld (0x%016llx)\n", _temp_val, (unsigned long long)_temp_val), \\
-        unsigned long long: printf("ul %llu (0x%016llx)\n", _temp_val, _temp_val), \\
+        unsigned long long: printf("ull %llu (0x%016llx)\n", _temp_val, _temp_val), \\
         float: printf("f %f\n", (double)_temp_val), \\
         double: printf("d %f\n", _temp_val), \\
         default: printf("unprintable\n") \\
@@ -84,18 +69,58 @@ print_main() {
 
 int main() {
 __EOF__
-}
+}  # print_main
+
 
 cleanup() {
-    echo "Goodbye!"
+    if [ $TERMINAL -eq 1 ]; then :
+        echo "Goodbye!"
+    fi
     exit 0
-}
+}  # cleanup
 
-echo "C REPL - Enter C statements or expressions"
-echo "Type !help for commands"
+
+#####################
+# Main
+#####################
+
+# Prevent core files.
+ulimit -c 0
+
+GOLDEN_FILE="crepl_golden.c"
+TEMP_FILE="crepl_temp.c"
+ERR_LOG="crepl_errs.log"
+EXECUTABLE="./crepl_exe"
+
+TERMINAL=0
+if [ -t 0 ]; then :
+  TERMINAL=1
+fi
+
+CONTINUE=0
+if [ "$1" = "" ]; then :;  # no option
+elif [ "$1" = "-h" ]; then usage; exit 0
+elif [ "$1" = "-c" ]; then CONTINUE=1
+else echo "Bad option '$1'" >&2; exit 1
+fi
+
+if [ $CONTINUE -eq 0 ]; then :
+  # Initialize golden file
+  if [ -f "$GOLDEN_FILE" ]; then :
+    cp "$GOLDEN_FILE" "$GOLDEN_FILE.prev"
+  fi
+  echo "" > "$GOLDEN_FILE"
+fi
+
+if [ $TERMINAL -eq 1 ]; then :
+    echo "C REPL - Enter C statements or expressions"
+    echo "Type !help for commands"
+fi
 
 while true; do
-    echo -n "c> "
+    if [ $TERMINAL -eq 1 ]; then :
+        echo -n "c> "
+    fi
     if ! read -r in_line; then
         in_line="!quit"
     fi
@@ -106,25 +131,40 @@ while true; do
     fi
 
     # Handle special commands
-    if [[ "$in_line" == "!quit" ]]; then
-        cleanup
-    elif [[ "$in_line" == "!help" ]]; then
-        list_help
-        continue
-    elif [[ "$in_line" == "!errs" ]]; then
-        cat "$ERR_LOG"
-        continue
-    elif [[ "$in_line" == "!new" ]]; then
-        echo "" > "$GOLDEN_FILE"
-        echo "Progam cleared"
-        continue
-    elif [[ "$in_line" == "!list" ]]; then
-        echo "Current code:"
-        cat "$GOLDEN_FILE"
-        continue
-    elif [[ "$in_line" == "!vi" ]]; then
-        vi "$GOLDEN_FILE"
-        in_line=";"
+    if [[ "$in_line" == !* ]]; then
+        if [[ "$in_line" == "!quit" ]]; then
+            cleanup
+        elif [[ "$in_line" == "!help" ]]; then
+            list_help
+            continue
+        elif [[ "$in_line" == "!errs" ]]; then
+            cat "$ERR_LOG"
+            continue
+        elif [[ "$in_line" == "!sh" ]]; then
+            sh
+            continue
+        elif [[ "$in_line" == "!new" ]]; then
+            echo "" > "$GOLDEN_FILE"
+            echo "Progam cleared"
+            continue
+        elif [[ "$in_line" == "!list" ]]; then
+            echo "Current code:"
+            cat "$GOLDEN_FILE"
+            continue
+        elif [[ "$in_line" == "!vi" ]]; then
+            vi "$GOLDEN_FILE"
+            in_line=";"  # trigger recompile
+        elif [[ "$in_line" == "!source "* ]]; then
+            filename="${in_line#!source }"
+            if [[ -f "$filename" ]]; then
+                ./crepl.sh -c < "$filename"
+            else
+                echo "File not found: $filename"
+            fi
+            continue
+        else
+            echo "Unrecognized command '$in_line'"
+        fi
     fi
 
     # Build the new program file.
