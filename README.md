@@ -358,7 +358,9 @@ And maybe a "!include headerfile" to add include directives above main().
 
 2. Add an auto-print of string type.
 
-3. Is there a way to leverage gdb to print entire complex structures?
+3. Add '-q' option to suppress initial welcome msg.
+
+4. Is there a way to leverage gdb to print entire complex structures?
 
 
 ## Rlwrap
