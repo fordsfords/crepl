@@ -2,6 +2,11 @@
 
 See https://github.com/fordsfords/crepl for full project.
 
+## v0.2.0 - 2025-08-18
+
+* Added "!obj" command.
+* Misc cleanups
+
 ## v0.1.0 - 2025-08-15
 
 * Initial release
