@@ -114,14 +114,16 @@ All commands start with exclamation point ("!").
 Any that doesn't start with explanation point is treated as a line of code to
 be executed.
 
-- `!help` - Show available commands.
-- `!errs` - Show compilation/runtime errors from last attempt. Note that line numbers refer to the 'crepl_temp.c' file.
-- `!new` - Clear all accumulated code and start fresh.
-- `!list` - Show all accumulated code.
-- `!vi` - Edit accumulated code in vi.
-- `!source filename` - read input from filename.
-- `!sh` - start an interactive sub-shell. Exit shell to return to crepl.
-- `!quit` - Exit the REPL
+- !help  - Show this help.
+- !errs  - Show compilation/runtime errors from last attempt.
+           Note that line numbers refer to the 'crepl_temp.c' file.
+- !new             - Clear all accumulated code.
+- !obj filename    - Include an object file in the build.
+- !list            - Show current accumulated code.
+- !vi              - Edit accumulated code in vi.
+- !source filename - read input from filename.
+- !sh    - start an interactive subshell. Exit shell to return to crepl.
+- !quit  - Exit the REPL
 
 ## Practical Examples
 
