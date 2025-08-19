@@ -13,6 +13,15 @@
 # is https://github.com/fordsfords/crepl
 
 
+# Call this to print a message only if standard in is an interactive terminal,
+# not if standard in is re-directed.
+term_echo() {
+    if (( "$TERMINAL" )); then :
+        echo "$@"
+    fi
+}  # term_echo
+
+
 usage() {
     echo "Usage: ./crepl.sh [-h] [-c]"
     echo "Where:"
@@ -25,10 +34,12 @@ usage() {
 list_help() {
     echo "Commands:"
     echo "  !help  - Show this help."
-    echo "  !errs  - Show compilation/runtime errors from last attempt. Note that line numbers refer to the 'crepl_temp.c' file."
-    echo "  !new   - Clear all accumulated code."
-    echo "  !list  - Show current accumulated code."
-    echo "  !vi    - Edit accumulated code in vi."
+    echo "  !errs  - Show compilation/runtime errors from last attempt."
+    echo "           Note that line numbers refer to the 'crepl_temp.c' file."
+    echo "  !new             - Clear all accumulated code."
+    echo "  !obj filename    - Include an object file in the build."
+    echo "  !list            - Show current accumulated code."
+    echo "  !vi              - Edit accumulated code in vi."
     echo "  !source filename - read input from filename."
     echo "  !sh    - start an interactive subshell. Exit shell to return to crepl."
     echo "  !quit  - Exit the REPL"
@@ -37,6 +48,42 @@ list_help() {
     echo "  int, unsigned int, long, unsigned long,"
     echo "  long long, unsigned long long, float, double"
 }  # list_help
+
+
+# Handle command-line.
+parse_options()
+{
+    # Parse command-line options
+    OPT_CONTINUE=0
+    while getopts "hc" OPTION  # ???
+    do
+      case $OPTION in
+        h) usage; exit 1 ;;
+        c) OPT_CONTINUE=1 ;;
+        \?) usage; exit 1 ;;
+      esac
+    done
+    shift `expr $OPTIND - 1`  # Make $1 the first positional param after options
+
+    if (( $OPT_CONTINUE )); then :
+        if [[ ! -f "$GOLDEN_FILE" ]]; then :
+            echo "Error: cannot continue previous session ($GOLDEN_FILE not found)" >&2
+            exit;
+        else :
+            term_echo "Continuing previous session"
+        fi
+    else :
+        # Initialize golden file
+        if [ -f "$GOLDEN_FILE" ]; then :
+            echo "Saving previous session to .prev"
+            cp "$GOLDEN_FILE" "$GOLDEN_FILE.prev"
+            touch "$OBJ_FILE"
+            cp "$OBJ_FILE" "$OBJ_FILE.prev"
+        fi
+        cat /dev/null >"$GOLDEN_FILE"
+        cat /dev/null >"$OBJ_FILE"
+    fi
+}
 
 
 # Create main template
@@ -73,9 +120,7 @@ __EOF__
 
 
 cleanup() {
-    if [ $TERMINAL -eq 1 ]; then :
-        echo "Goodbye!"
-    fi
+    term_echo "Goodbye!"
     exit 0
 }  # cleanup
 
@@ -88,45 +133,31 @@ cleanup() {
 ulimit -c 0
 
 GOLDEN_FILE="crepl_golden.c"
+OBJ_FILE="crepl_golden.obj"
 TEMP_FILE="crepl_temp.c"
 ERR_LOG="crepl_errs.log"
 EXECUTABLE="./crepl_exe"
 
+# See if standard in is an interactive terminal. We want to be less verbose if input is re-directed.
 TERMINAL=0
 if [ -t 0 ]; then :
   TERMINAL=1
 fi
 
-CONTINUE=0
-if [ "$1" = "" ]; then :;  # no option
-elif [ "$1" = "-h" ]; then usage; exit 0
-elif [ "$1" = "-c" ]; then CONTINUE=1
-else echo "Bad option '$1'" >&2; exit 1
-fi
+parse_options "$@"
 
-if [ $CONTINUE -eq 0 ]; then :
-  # Initialize golden file
-  if [ -f "$GOLDEN_FILE" ]; then :
-    cp "$GOLDEN_FILE" "$GOLDEN_FILE.prev"
-  fi
-  echo "" > "$GOLDEN_FILE"
-fi
+term_echo "C REPL - Enter C statements or expressions"
+term_echo "Type !help for commands"
 
-if [ $TERMINAL -eq 1 ]; then :
-    echo "C REPL - Enter C statements or expressions"
-    echo "Type !help for commands"
-fi
-
-while true; do
-    if [ $TERMINAL -eq 1 ]; then :
-        echo -n "c> "
-    fi
+while true; do :
+    term_echo -n "c> "
+    # Handle EOF (control-d).
     if ! read -r in_line; then
         in_line="!quit"
     fi
 
     # Handle empty lines
-    if [[ -z "$in_line" ]]; then
+    if [[ "$in_line" == "" ]]; then
         continue
     fi
 
@@ -139,6 +170,14 @@ while true; do
             continue
         elif [[ "$in_line" == "!errs" ]]; then
             cat "$ERR_LOG"
+            continue
+        elif [[ "$in_line" == "!obj "* ]]; then
+            filename="${in_line#!obj }"
+            if [[ -f "$filename" ]]; then
+                echo "$filename" >>"$OBJ_FILE"
+            else
+                echo "File not found: $filename"
+            fi
             continue
         elif [[ "$in_line" == "!sh" ]]; then
             sh
@@ -164,6 +203,7 @@ while true; do
             continue
         else
             echo "Unrecognized command '$in_line'"
+            continue
         fi
     fi
 
@@ -184,7 +224,7 @@ while true; do
     echo "}" >> "$TEMP_FILE" 
 
     # Try to compile
-    if gcc -std=gnu11 -o "$EXECUTABLE" "$TEMP_FILE" -lm 2> $ERR_LOG; then
+    if gcc -std=gnu11 -o "$EXECUTABLE" $(cat "$OBJ_FILE") "$TEMP_FILE" -lm 2> $ERR_LOG; then
         # Compilation successful - run it
         if "$EXECUTABLE" 2> $ERR_LOG; then
             # Execution successful - the input line is OK.

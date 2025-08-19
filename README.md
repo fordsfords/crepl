@@ -89,9 +89,12 @@ i 42 (0x0000002a)
 
 c> ++x
 i 43 (0x0000002b)
+
+c> #include "tmstr.h" ;
 ```
 
-This rule exists because C statements like `int x = 42;` aren't expressions and can't be automatically printed. The semicolon tells the REPL whether you want output or not.
+This rule exists because C statements like `int x = 42;` and include lines aren't expressions and can't be automatically printed.
+The unnecessary semicolon tells the REPL whether you want output or not.
 
 If you make a mistake and it doesn't compile, the line is not added to the "golden file".
 The goal is for the golden file to always be compilable.
@@ -315,9 +318,11 @@ Just know that the "state" will change with each line of code entered.
 
 When you exit, the tool leaves its temporary files for you to examine:
 * crepl_golden.c - your commands so far ("golden file").
-* crepl_golden.c.bak - golden file from your previous session.
+* crepl_golden.c.prev - golden file from your previous session.
+* crepl_obj.txt - list of extra object files you want to include.
+* crepl_obj.txt.prev - obj file from your previous session.
 * crepl_temp.c - the most-recent full C file that was compiled.
-If you get a compile error, you can examine the full program.
+  If you get a compile error, you can examine the full program.
 * crepl_errs.log - Either compile errors or run-time errors.
 
 When crepl.sh is executed normally, the "crepl_golden.c" is deleted
